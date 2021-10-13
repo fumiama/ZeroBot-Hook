@@ -27,11 +27,10 @@ type Driver interface {
 var BotConfig *Config
 
 // Hook 改变本插件的环境变量以加载插件
-func Hook(botconf unsafe.Pointer, apicallers unsafe.Pointer, hooknew unsafe.Pointer, defaultengine unsafe.Pointer) {
+func Hook(botconf unsafe.Pointer, apicallers unsafe.Pointer, hooknew unsafe.Pointer) {
 	BotConfig = (*Config)(botconf)
 	APICallers = (*callerMap)(apicallers)
 	New = *(*(func() *Engine))(hooknew)
-	defaultEngine = (*Engine)(defaultengine)
 }
 
 // GetBot 获取指定的bot (Ctx)实例

@@ -106,19 +106,6 @@ func (ctx *Ctx) SendChain(message ...message.MessageSegment) int64 {
 	return ctx.SendPrivateMessage(ctx.Event.UserID, message)
 }
 
-// FutureEvent ...
-func (ctx *Ctx) FutureEvent(Type string, rule ...Rule) *FutureEvent {
-	return ctx.ma.FutureEvent(Type, rule...)
-}
-
-// Get ..
-func (ctx *Ctx) Get(prompt string) string {
-	if prompt != "" {
-		ctx.Send(prompt)
-	}
-	return (<-ctx.FutureEvent("message", ctx.CheckSession()).Next()).RawMessage
-}
-
 // ExtractPlainText 提取消息中的纯文本
 func (ctx *Ctx) ExtractPlainText() string {
 	if ctx == nil || ctx.Event == nil || ctx.Event.Message == nil {
