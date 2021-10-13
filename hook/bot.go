@@ -1,7 +1,6 @@
 package hook
 
 import (
-	"fmt"
 	"sync"
 	"unsafe"
 
@@ -46,7 +45,7 @@ func Hook(botconf interface{}, apicallers interface{}, hooknew interface{}, matl
 	New = *(*(func() *Engine))(unsafe.Pointer(&n))
 	matcherList = (*[]*Matcher)(getdata(&matlist))
 	matcherLock = (*sync.RWMutex)(getdata(&matlock))
-	fmt.Printf("[plugin]matlist: %p, matlock: %p\n", matcherList, matcherLock)
+	// fmt.Printf("[plugin]matlist: %p, matlock: %p\n", matcherList, matcherLock)
 }
 
 // GetBot 获取指定的bot (Ctx)实例
