@@ -1,4 +1,4 @@
-package main
+package hook
 
 import (
 	zero "github.com/wdvxdr1123/ZeroBot"

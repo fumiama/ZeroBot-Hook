@@ -4,7 +4,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-package main
+package hook
 
 import (
 	"sync"
@@ -95,6 +95,10 @@ type entryCallerMap struct {
 	p unsafe.Pointer // *interface{}
 }
 
+func newEntryCallerMap(i APICaller) *entryCallerMap {
+	return &entryCallerMap{p: unsafe.Pointer(&i)}
+}
+
 // Load returns the value stored in the map for a key, or nil if no
 // value is present.
 // The ok result indicates whether value was found in the map.
@@ -129,6 +133,179 @@ func (e *entryCallerMap) load() (value APICaller, ok bool) {
 		return value, false
 	}
 	return *(*APICaller)(p), true
+}
+
+// Store sets the value for a key.
+func (m *callerMap) Store(key int64, value APICaller) {
+	read, _ := m.read.Load().(readOnlyCallerMap)
+	if e, ok := read.m[key]; ok && e.tryStore(&value) {
+		return
+	}
+
+	m.mu.Lock()
+	read, _ = m.read.Load().(readOnlyCallerMap)
+	if e, ok := read.m[key]; ok {
+		if e.unexpungeLocked() {
+			// The entry was previously expunged, which implies that there is a
+			// non-nil dirty map and this entry is not in it.
+			m.dirty[key] = e
+		}
+		e.storeLocked(&value)
+	} else if e, ok := m.dirty[key]; ok {
+		e.storeLocked(&value)
+	} else {
+		if !read.amended {
+			// We're adding the first new key to the dirty map.
+			// Make sure it is allocated and mark the read-only map as incomplete.
+			m.dirtyLocked()
+			m.read.Store(readOnlyCallerMap{m: read.m, amended: true})
+		}
+		m.dirty[key] = newEntryCallerMap(value)
+	}
+	m.mu.Unlock()
+}
+
+// tryStore stores a value if the entry has not been expunged.
+//
+// If the entry is expunged, tryStore returns false and leaves the entry
+// unchanged.
+func (e *entryCallerMap) tryStore(i *APICaller) bool {
+	for {
+		p := atomic.LoadPointer(&e.p)
+		if p == expungedCallerMap {
+			return false
+		}
+		if atomic.CompareAndSwapPointer(&e.p, p, unsafe.Pointer(i)) {
+			return true
+		}
+	}
+}
+
+// unexpungeLocked ensures that the entry is not marked as expunged.
+//
+// If the entry was previously expunged, it must be added to the dirty map
+// before m.mu is unlocked.
+func (e *entryCallerMap) unexpungeLocked() (wasExpunged bool) {
+	return atomic.CompareAndSwapPointer(&e.p, expungedCallerMap, nil)
+}
+
+// storeLocked unconditionally stores a value to the entry.
+//
+// The entry must be known not to be expunged.
+func (e *entryCallerMap) storeLocked(i *APICaller) {
+	atomic.StorePointer(&e.p, unsafe.Pointer(i))
+}
+
+// LoadOrStore returns the existing value for the key if present.
+// Otherwise, it stores and returns the given value.
+// The loaded result is true if the value was loaded, false if stored.
+func (m *callerMap) LoadOrStore(key int64, value APICaller) (actual APICaller, loaded bool) {
+	// Avoid locking if it's a clean hit.
+	read, _ := m.read.Load().(readOnlyCallerMap)
+	if e, ok := read.m[key]; ok {
+		actual, loaded, ok := e.tryLoadOrStore(value)
+		if ok {
+			return actual, loaded
+		}
+	}
+
+	m.mu.Lock()
+	read, _ = m.read.Load().(readOnlyCallerMap)
+	if e, ok := read.m[key]; ok {
+		if e.unexpungeLocked() {
+			m.dirty[key] = e
+		}
+		actual, loaded, _ = e.tryLoadOrStore(value)
+	} else if e, ok := m.dirty[key]; ok {
+		actual, loaded, _ = e.tryLoadOrStore(value)
+		m.missLocked()
+	} else {
+		if !read.amended {
+			// We're adding the first new key to the dirty map.
+			// Make sure it is allocated and mark the read-only map as incomplete.
+			m.dirtyLocked()
+			m.read.Store(readOnlyCallerMap{m: read.m, amended: true})
+		}
+		m.dirty[key] = newEntryCallerMap(value)
+		actual, loaded = value, false
+	}
+	m.mu.Unlock()
+
+	return actual, loaded
+}
+
+// tryLoadOrStore atomically loads or stores a value if the entry is not
+// expunged.
+//
+// If the entry is expunged, tryLoadOrStore leaves the entry unchanged and
+// returns with ok==false.
+func (e *entryCallerMap) tryLoadOrStore(i APICaller) (actual APICaller, loaded, ok bool) {
+	p := atomic.LoadPointer(&e.p)
+	if p == expungedCallerMap {
+		return actual, false, false
+	}
+	if p != nil {
+		return *(*APICaller)(p), true, true
+	}
+
+	// Copy the interface after the first load to make this method more amenable
+	// to escape analysis: if we hit the "load" path or the entry is expunged, we
+	// shouldn't bother heap-allocating.
+	ic := i
+	for {
+		if atomic.CompareAndSwapPointer(&e.p, nil, unsafe.Pointer(&ic)) {
+			return i, false, true
+		}
+		p = atomic.LoadPointer(&e.p)
+		if p == expungedCallerMap {
+			return actual, false, false
+		}
+		if p != nil {
+			return *(*APICaller)(p), true, true
+		}
+	}
+}
+
+// LoadAndDelete deletes the value for a key, returning the previous value if any.
+// The loaded result reports whether the key was present.
+func (m *callerMap) LoadAndDelete(key int64) (value APICaller, loaded bool) {
+	read, _ := m.read.Load().(readOnlyCallerMap)
+	e, ok := read.m[key]
+	if !ok && read.amended {
+		m.mu.Lock()
+		read, _ = m.read.Load().(readOnlyCallerMap)
+		e, ok = read.m[key]
+		if !ok && read.amended {
+			e, ok = m.dirty[key]
+			delete(m.dirty, key)
+			// Regardless of whether the entry was present, record a miss: this key
+			// will take the slow path until the dirty map is promoted to the read
+			// map.
+			m.missLocked()
+		}
+		m.mu.Unlock()
+	}
+	if ok {
+		return e.delete()
+	}
+	return value, false
+}
+
+// Delete deletes the value for a key.
+func (m *callerMap) Delete(key int64) {
+	m.LoadAndDelete(key)
+}
+
+func (e *entryCallerMap) delete() (value APICaller, ok bool) {
+	for {
+		p := atomic.LoadPointer(&e.p)
+		if p == nil || p == expungedCallerMap {
+			return value, false
+		}
+		if atomic.CompareAndSwapPointer(&e.p, p, nil) {
+			return *(*APICaller)(p), true
+		}
+	}
 }
 
 // Range calls f sequentially for each key and value present in the map.
@@ -182,4 +359,29 @@ func (m *callerMap) missLocked() {
 	m.read.Store(readOnlyCallerMap{m: m.dirty})
 	m.dirty = nil
 	m.misses = 0
+}
+
+func (m *callerMap) dirtyLocked() {
+	if m.dirty != nil {
+		return
+	}
+
+	read, _ := m.read.Load().(readOnlyCallerMap)
+	m.dirty = make(map[int64]*entryCallerMap, len(read.m))
+	for k, e := range read.m {
+		if !e.tryExpungeLocked() {
+			m.dirty[k] = e
+		}
+	}
+}
+
+func (e *entryCallerMap) tryExpungeLocked() (isExpunged bool) {
+	p := atomic.LoadPointer(&e.p)
+	for p == nil {
+		if atomic.CompareAndSwapPointer(&e.p, nil, expungedCallerMap) {
+			return true
+		}
+		p = atomic.LoadPointer(&e.p)
+	}
+	return p == expungedCallerMap
 }
