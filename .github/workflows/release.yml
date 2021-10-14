@@ -33,13 +33,13 @@ jobs:
         run: go mod tidy
 
       - name: Build linux-x64
-        run: CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o artifacts/plugin-linux-x64.so
+        run: CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -buildmode=plugin -o artifacts/plugin-linux-x64.so
       - name: Build linux-x86
-        run: CGO_ENABLED=0 GOOS=linux GOARCH=386 go build -ldflags="-s -w" -o artifacts/plugin-linux-x86.so
+        run: CGO_ENABLED=0 GOOS=linux GOARCH=386 go build -ldflags="-s -w" -buildmode=plugin -o artifacts/plugin-linux-x86.so
       - name: Build arm64
-        run: CGO_ENABLED=0 GOOS=linux GOARCH=arm64 GOARM=7 go build -ldflags="-s -w" -o artifacts/plugin-linux-arm64.so
+        run: CGO_ENABLED=0 GOOS=linux GOARCH=arm64 GOARM=7 go build -ldflags="-s -w" -buildmode=plugin -o artifacts/plugin-linux-arm64.so
       - name: Build armv6
-        run: CGO_ENABLED=0 GOOS=linux GOARCH=arm GOARM=6 go build -ldflags="-s -w" -o artifacts/plugin-linux-armv6.so
+        run: CGO_ENABLED=0 GOOS=linux GOARCH=arm GOARM=6 go build -ldflags="-s -w" -o -buildmode=plugin artifacts/plugin-linux-armv6.so
 
       - name: Upload binaries to release
         uses: svenstaro/upload-release-action@v2
