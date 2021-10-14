@@ -4,7 +4,7 @@ package hook
 var New func() *Engine
 
 // hook 的插件不允许使用 defaultEngine
-// var defaultEngine *Engine
+var defaultEngine *Engine
 
 // Engine is the pre_handler, post_handler manager
 type Engine struct {

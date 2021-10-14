@@ -3,12 +3,16 @@ package hook
 import (
 	"sync"
 	"unsafe"
-
-	zero "github.com/wdvxdr1123/ZeroBot"
 )
 
 // Config is config of zero bot
-type Config = zero.Config
+type Config struct {
+	NickName      []string `json:"nickname"`       // 机器人名称
+	CommandPrefix string   `json:"command_prefix"` // 触发命令
+	SuperUsers    []string `json:"super_users"`    // 超级用户
+	SelfID        string   `json:"self_id"`        // 机器人账号
+	Driver        []Driver `json:"-"`              // 通信驱动
+}
 
 // APICallers 所有的APICaller列表， 通过self-ID映射
 var APICallers *callerMap
@@ -38,13 +42,14 @@ func getdata(ptr *interface{}) unsafe.Pointer {
 }
 
 // Hook 改变本插件的环境变量以加载插件
-func Hook(botconf interface{}, apicallers interface{}, hooknew interface{}, matlist interface{}, matlock interface{}) {
+func Hook(botconf interface{}, apicallers interface{}, hooknew interface{}, matlist interface{}, matlock interface{}, defen interface{}) {
 	BotConfig = (*Config)(getdata(&botconf))
 	APICallers = (*callerMap)(getdata(&apicallers))
 	n := getdata(&hooknew)
 	New = *(*(func() *Engine))(unsafe.Pointer(&n))
 	matcherList = (*[]*Matcher)(getdata(&matlist))
 	matcherLock = (*sync.RWMutex)(getdata(&matlock))
+	defaultEngine = (*Engine)(getdata(&defen))
 	// fmt.Printf("[plugin]matlist: %p, matlock: %p\n", matcherList, matcherLock)
 }
 

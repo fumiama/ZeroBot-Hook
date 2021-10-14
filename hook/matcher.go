@@ -3,13 +3,11 @@ package hook
 import (
 	"sort"
 	"sync"
-
-	zero "github.com/wdvxdr1123/ZeroBot"
 )
 
 type (
 	// Rule filter the event
-	Rule = zero.Rule
+	Rule = func(ctx *Ctx) bool
 	// Handler 事件处理函数
 	Handler = func(ctx *Ctx)
 )
@@ -42,7 +40,7 @@ var (
 )
 
 // State store the context of a matcher.
-type State = zero.State
+type State map[string]interface{}
 
 func sortMatcher() {
 	sort.Slice((*matcherList), func(i, j int) bool { // 按优先级排序
