@@ -18,4 +18,4 @@ go build -ldflags "-s -w" -buildmode=plugin -o demo.so
 CGO_ENABLED=1 GOOS=linux GOARCH=arm GOARM=6 CC=arm-linux-gnueabihf-gcc-9 CXX=g++-9-arm-linux-gnueabihf go build -ldflags="-s -w" -buildmode=plugin -o artifacts/zbpd-linux-armv6
 ```
 ### 开始使用
-放置动态库到[ZeroBot-Plugin](https://github.com/FloatTech/ZeroBot-Plugin)的`plugins/`目录下，给机器人发送`/刷新插件`即可，或重启也可加载。
+放置动态库到[ZeroBot-Plugin-Dynamic](https://github.com/FloatTech/ZeroBot-Plugin-Dynamic)的`plugins/`目录下，给机器人发送`/刷新插件`即可，或重启也可加载。
