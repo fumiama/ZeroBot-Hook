@@ -5,8 +5,11 @@
 ### 编写插件
 复制`main.go`到本地，修改`main.go`的`Init`函数为插件内容，语法与[ZeroBot](https://github.com/wdvxdr1123/ZeroBot)基本相同。
 ### 编译为动态库
-#### 使用`Actions`
-只要创建形如`v1.2.3`的`tag`，即可触发插件编译流程。编译好后前往`Release`页面下载即可。
+#### 使用Actions编译
+1. fork 本仓库
+2. 上传修改后的`main.go`及其它新增文件。
+3. 创建形如`v1.2.3`的`tag`，触发插件编译流程。
+4. 编译好后前往`Release`页面下载即可。
 #### 本地编译
 ```bash
 # 本机架构
