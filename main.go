@@ -10,15 +10,12 @@ import (
 	"github.com/fumiama/ZeroBot-Hook/hook/message"
 )
 
-var options = ctrl.Options{
-	DisableOnDefault: false,
-	Help:             "help from demo",
-}
-
-//export Inita
 func Inita() {
 	// --------------------------在此下书写插件内容--------------------------
-	en := ctrl.Register("demo", &options)
+	en := ctrl.Register("demo", &ctrl.Options{
+		DisableOnDefault: false,
+		Help:             "help from demo",
+	})
 	en.OnCommand("demo", zero.AdminPermission).SetBlock(true).SecondPriority().
 		Handle(func(ctx *zero.Ctx) {
 			fmt.Println("msg recv.")
@@ -36,20 +33,26 @@ func Hook(botconf unsafe.Pointer, apicallers unsafe.Pointer, hooknew unsafe.Poin
 	sndgrpmsg unsafe.Pointer, sndprivmsg unsafe.Pointer, getmsg unsafe.Pointer,
 	parsectx unsafe.Pointer,
 	custnode unsafe.Pointer, pasemsg unsafe.Pointer, parsemsgfromarr unsafe.Pointer,
-) {
+) unsafe.Pointer {
 	zero.Hook(botconf, apicallers, hooknew, matlist, matlock, defen)
 	ctrl.Register = *(*(func(service string, o *ctrl.Options) *zero.Engine))(unsafe.Pointer(&reg))
 	ctrl.Delete = *(*(func(service string)))(unsafe.Pointer(&del))
 	zero.HookCtx(sndgrpmsg, sndprivmsg, getmsg, parsectx)
 	message.HookMsg(custnode, pasemsg, parsemsgfromarr)
-	// fmt.Printf("[plugin]set reg: %x, del: %x\n", ctrl.Register, ctrl.Delete)
+	inita := (interface{})(Inita)
+	return getdata(&inita)
 }
 
 func main() {
 	// stub!
 }
 
-type String struct {
-	Data unsafe.Pointer
-	Len  int
+func getdata(ptr *interface{}) unsafe.Pointer {
+	return (*eface)(unsafe.Pointer(ptr)).data
+}
+
+// 没有方法的interface
+type eface struct {
+	_type uintptr
+	data  unsafe.Pointer
 }

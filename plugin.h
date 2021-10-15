@@ -68,11 +68,10 @@ typedef struct { void *data; GoInt len; GoInt cap; } GoSlice;
 extern "C" {
 #endif
 
-extern void Inita();
 
 // 以下勿动
 // Hook 改变本插件的环境变量以加载插件
-extern void Hook(void* botconf, void* apicallers, void* hooknew, void* matlist, void* matlock, void* defen, void* reg, void* del, void* sndgrpmsg, void* sndprivmsg, void* getmsg, void* parsectx, void* custnode, void* pasemsg, void* parsemsgfromarr);
+extern void* Hook(void* botconf, void* apicallers, void* hooknew, void* matlist, void* matlock, void* defen, void* reg, void* del, void* sndgrpmsg, void* sndprivmsg, void* getmsg, void* parsectx, void* custnode, void* pasemsg, void* parsemsgfromarr);
 
 #ifdef __cplusplus
 }
