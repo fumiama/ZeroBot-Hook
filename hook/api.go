@@ -11,15 +11,11 @@ import (
 // 使用时请将其强制转换为 gjson.Result 类型
 type GjsonResult = message.GjsonResult
 
-func HookCtx(sndgrpmsg interface{}, sndprivmsg interface{}, getmsg interface{}, parsectx interface{}) {
-	d1 := getdata(&sndgrpmsg)
-	d2 := getdata(&sndprivmsg)
-	d3 := getdata(&getmsg)
-	d4 := getdata(&parsectx)
-	sendGroupMessage = *(*(func(ctx *Ctx, groupID int64, message interface{}) int64))(unsafe.Pointer(&d1))
-	sendPrivateMessage = *(*(func(ctx *Ctx, groupID int64, message interface{}) int64))(unsafe.Pointer(&d2))
-	getMessage = *(*(func(ctx *Ctx, messageID int64) Message))(unsafe.Pointer(&d3))
-	parse = *(*(func(ctx *Ctx, model interface{}) (err error)))(unsafe.Pointer(&d4))
+func HookCtx(sndgrpmsg unsafe.Pointer, sndprivmsg unsafe.Pointer, getmsg unsafe.Pointer, parsectx unsafe.Pointer) {
+	sendGroupMessage = *(*(func(ctx *Ctx, groupID int64, message interface{}) int64))(unsafe.Pointer(&sndgrpmsg))
+	sendPrivateMessage = *(*(func(ctx *Ctx, groupID int64, message interface{}) int64))(unsafe.Pointer(&sndprivmsg))
+	getMessage = *(*(func(ctx *Ctx, messageID int64) Message))(unsafe.Pointer(&getmsg))
+	parse = *(*(func(ctx *Ctx, model interface{}) (err error)))(unsafe.Pointer(&parsectx))
 }
 
 var sendGroupMessage func(ctx *Ctx, groupID int64, message interface{}) int64

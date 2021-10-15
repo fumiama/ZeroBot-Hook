@@ -31,25 +31,14 @@ type Driver interface {
 // BotConfig 运行中bot的配置，是Run函数的参数的拷贝
 var BotConfig *Config
 
-// 没有方法的interface
-type eface struct {
-	_type uintptr
-	data  unsafe.Pointer
-}
-
-func getdata(ptr *interface{}) unsafe.Pointer {
-	return (*eface)(unsafe.Pointer(ptr)).data
-}
-
 // Hook 改变本插件的环境变量以加载插件
-func Hook(botconf interface{}, apicallers interface{}, hooknew interface{}, matlist interface{}, matlock interface{}, defen interface{}) {
-	BotConfig = (*Config)(getdata(&botconf))
-	APICallers = (*callerMap)(getdata(&apicallers))
-	n := getdata(&hooknew)
-	New = *(*(func() *Engine))(unsafe.Pointer(&n))
-	matcherList = (*[]*Matcher)(getdata(&matlist))
-	matcherLock = (*sync.RWMutex)(getdata(&matlock))
-	defaultEngine = (*Engine)(getdata(&defen))
+func Hook(botconf unsafe.Pointer, apicallers unsafe.Pointer, hooknew unsafe.Pointer, matlist unsafe.Pointer, matlock unsafe.Pointer, defen unsafe.Pointer) {
+	BotConfig = (*Config)(botconf)
+	APICallers = (*callerMap)(apicallers)
+	New = *(*(func() *Engine))(unsafe.Pointer(&hooknew))
+	matcherList = (*[]*Matcher)(matlist)
+	matcherLock = (*sync.RWMutex)(matlock)
+	defaultEngine = (*Engine)(defen)
 	// fmt.Printf("[plugin]matlist: %p, matlock: %p\n", matcherList, matcherLock)
 }
 
