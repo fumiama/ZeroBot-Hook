@@ -1,4 +1,5 @@
-# ZeroBot-Hook
+> **注意**：本仓库将不再维护，后续更新请移步[Plugin-Template](https://github.com/FloatTech/Plugin-Template)
+# ~~ZeroBot-Hook~~
 为 ZeroBot-Plugin 生成动态库插件。
 
 # 使用方法
